@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confluence Content Reader & Summarizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0052CC 0%, #0065FF 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .config-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .config-section h2 {
+            color: #0052CC;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #0052CC;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #0052CC;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0065FF;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 25px;
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .sidebar h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .space-list, .page-list {
+            list-style: none;
+        }
+
+        .space-item, .page-item {
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .space-item:hover, .page-item:hover {
+            border-color: #0052CC;
+            transform: translateX(5px);
+        }
+
+        .space-item.active, .page-item.active {
+            background: #0052CC;
+            color: white;
+        }
+
+        .space-key {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .content-area {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .content-title {
+            font-size: 20px;
+            color: #333;
+        }
+
+        .content-body {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            min-height: 300px;
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .content-body h1, .content-body h2, .content-body h3 {
+            color: #0052CC;
+            margin: 20px 0 10px 0;
+        }
+
+        .content-body p {
+            margin-bottom: 15px;
+        }
+
+        .content-body code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .content-body pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .summary-section {
+            margin-top: 25px;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid #0052CC;
+        }
+
+        .summary-section h3 {
+            color: #0052CC;
+            margin-bottom: 15px;
+        }
+
+        .summary-prompt {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 15px;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .summary-prompt:focus {
+            outline: none;
+            border-color: #0052CC;
+        }
+
+        .summary-result {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 15px;
+            line-height: 1.8;
+            display: none;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0052CC;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .breadcrumb span {
+            cursor: pointer;
+            color: #0052CC;
+        }
+
+        .breadcrumb span:hover {
+            text-decoration: underline;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Confluence Content Reader & Summarizer</h1>
+            <p>Browse your Confluence spaces and pages, then get AI-powered summaries</p>
+        </div>
+
+        <div class="content">
+            <!-- Configuration Section -->
+            <div class="config-section">
+                <h2>🔐 Connection Settings</h2>
+                <div class="form-group">
+                    <label for="baseUrl">Confluence Base URL</label>
+                    <input type="url" id="baseUrl" placeholder="https://your-domain.atlassian.net/wiki">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" placeholder="your-email@company.com">
+                </div>
+                <div class="form-group">
+                    <label for="apiToken">API Token</label>
+                    <input type="password" id="apiToken" placeholder="Your Atlassian API Token">
+                </div>
+                <button class="btn btn-primary" onclick="testConnection()">
+                    🔌 Test Connection & Load Spaces
+                </button>
+                <div id="connectionStatus" class="status-message"></div>
+            </div>
+
+            <!-- Main Content Area (hidden until connected) -->
+            <div id="mainContent" class="hidden">
+                <div class="main-layout">
+                    <!-- Sidebar -->
+                    <div class="sidebar">
+                        <h3>📁 Spaces</h3>
+                        <ul id="spaceList" class="space-list">
+                            <li class="empty-state">Loading spaces...</li>
+                        </ul>
+                        
+                        <h3 style="margin-top: 25px;">📄 Pages</h3>
+                        <ul id="pageList" class="page-list">
+                            <li class="empty-state">Select a space to view pages</li>
+                        </ul>
+                    </div>
+
+                    <!-- Content Area -->
+                    <div class="content-area">
+                        <div id="contentDisplay">
+                            <div class="empty-state">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    <polyline points="10 9 9 9 8 9"></polyline>
+                                </svg>
+                                <h3>Select a page to view content</h3>
+                                <p>Choose a space from the sidebar, then select a page to read its content</p>
+                            </div>
+                        </div>
+
+                        <!-- Summary Section -->
+                        <div id="summarySection" class="summary-section hidden">
+                            <h3>🤖 AI Summary</h3>
+                            <textarea 
+                                id="summaryPrompt" 
+                                class="summary-prompt" 
+                                placeholder="Enter your prompt for summarizing the content (e.g., 'Summarize the key points in 3 bullet points' or 'What are the main action items?')"
+                            >Summarize the key points of this content in a clear and concise way</textarea>
+                            <div class="action-buttons">
+                                <button class="btn btn-success" onclick="generateSummary()">
+                                    ✨ Generate Summary
+                                </button>
+                                <button class="btn btn-secondary" onclick="clearSummary()">
+                                    🗑️ Clear
+                                </button>
+                            </div>
+                            <div id="summaryResult" class="summary-result"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let config = {
+            baseUrl: '',
+            email: '',
+            apiToken: ''
+        };
+        let currentSpace = null;
+        let currentPage = null;
+        let currentPageContent = '';
+
+        // Test connection and load spaces
+        async function testConnection() {
+            const baseUrl = document.getElementById('baseUrl').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const apiToken = document.getElementById('apiToken').value.trim();
+            const statusDiv = document.getElementById('connectionStatus');
+
+            if (!baseUrl || !email || !apiToken) {
+                showStatus(statusDiv, 'Please fill in all fields', 'error');
+                return;
+            }
+
+            config = { baseUrl, email, apiToken };
+
+            try {
+                statusDiv.innerHTML = '<span class="loading"></span> Testing connection...';
+                statusDiv.className = 'status-message';
+                statusDiv.style.display = 'block';
+
+                const response = await fetch(`${baseUrl}/rest/api/space?limit=100`, {
+                    headers: {
+                        'Authorization': `Basic ${btoa(email + ':' + apiToken)}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                showStatus(statusDiv, '✅ Connection successful! Loading spaces...', 'success');
+                
+                setTimeout(() => {
+                    loadSpaces(data.results);
+                    document.getElementById('mainContent').classList.remove('hidden');
+                }, 1000);
+
+            } catch (error) {
+                showStatus(statusDiv, `❌ Connection failed: ${error.message}. Please check your credentials.`, 'error');
+            }
+        }
+
+        function showStatus(element, message, type) {
+            element.textContent = message;
+            element.className = `status-message ${type}`;
+        }
+
+        // Load spaces into sidebar
+        function loadSpaces(spaces) {
+            const spaceList = document.getElementById('spaceList');
+            spaceList.innerHTML = '';
+
+            if (spaces.length === 0) {
+                spaceList.innerHTML = '<li class="empty-state">No spaces found</li>';
+                return;
+            }
+
+            spaces.forEach(space => {
+                const li = document.createElement('li');
+                li.className = 'space-item';
+                li.innerHTML = `
+                    <div>${space.name}</div>
+                    <div class="space-key">${space.key}</div>
+                `;
+                li.onclick = () => selectSpace(space, li);
+                spaceList.appendChild(li);
+            });
+        }
+
+        // Select a space and load its pages
+        async function selectSpace(space, element) {
+            // Update active state
+            document.querySelectorAll('.space-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+
+            currentSpace = space;
+            currentPage = null;
+            currentPageContent = '';
+
+            // Clear page list and content
+            document.getElementById('pageList').innerHTML = '<li class="empty-state"><span class="loading"></span> Loading pages...</li>';
+            document.getElementById('contentDisplay').innerHTML = `
+                <div class="empty-state">
+                    <h3>Loading pages from ${space.name}...</h3>
+                </div>
+            `;
+            document.getElementById('summarySection').classList.add('hidden');
+
+            try {
+                const response = await fetch(
+                    `${config.baseUrl}/rest/api/space/${space.key}/content?type=page&limit=50&expand=version`,
+                    {
+                        headers: {
+                            'Authorization': `Basic ${btoa(config.email + ':' + config.apiToken)}`,
+                            'Accept': 'application/json'
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`Failed to load pages: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                loadPages(data.results);
+
+            } catch (error) {
+                document.getElementById('pageList').innerHTML = `<li class="empty-state">Error: ${error.message}</li>`;
+            }
+        }
+
+        // Load pages into sidebar
+        function loadPages(pages) {
+            const pageList = document.getElementById('pageList');
+            pageList.innerHTML = '';
+
+            if (pages.length === 0) {
+                pageList.innerHTML = '<li class="empty-state">No pages in this space</li>';
+                return;
+            }
+
+            pages.forEach(page => {
+                const li = document.createElement('li');
+                li.className = 'page-item';
+                li.innerHTML = `
+                    <div>${page.title}</div>
+                    <div class="space-key">v${page.version.number}</div>
+                `;
+                li.onclick = () => selectPage(page, li);
+                pageList.appendChild(li);
+            });
+        }
+
+        // Select a page and load its content
+        async function selectPage(page, element) {
+            // Update active state
+            document.querySelectorAll('.page-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+
+            currentPage = page;
+
+            try {
+                const response = await fetch(
+                    `${config.baseUrl}/rest/api/content/${page.id}?expand=body.storage,version,space`,
+                    {
+                        headers: {
+                            'Authorization': `Basic ${btoa(config.email + ':' + config.apiToken)}`,
+                            'Accept': 'application/json'
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`Failed to load content: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                displayContent(data);
+
+            } catch (error) {
+                alert(`Error loading page content: ${error.message}`);
+            }
+        }
+
+        // Display page content
+        function displayContent(pageData) {
+            currentPageContent = pageData.body?.storage?.value || '';
+            
+            const contentDisplay = document.getElementById('contentDisplay');
+            contentDisplay.innerHTML = `
+                <div class="content-header">
+                    <h2 class="content-title">${pageData.title}</h2>
+                </div>
+                <div class="breadcrumb">
+                    <span onclick="document.getElementById('mainContent').scrollIntoView()">🏠 Home</span>
+                    <span>/</span>
+                    <span>${pageData.space?.name || 'Space'}</span>
+                    <span>/</span>
+                    <span>${pageData.title}</span>
+                </div>
+                <div class="content-body">
+                    ${currentPageContent}
+                </div>
+            `;
+
+            // Show summary section
+            document.getElementById('summarySection').classList.remove('hidden');
+            document.getElementById('summaryResult').style.display = 'none';
+        }
+
+        // Generate summary using AI
+        async function generateSummary() {
+            const prompt = document.getElementById('summaryPrompt').value.trim();
+            const resultDiv = document.getElementById('summaryResult');
+
+            if (!currentPageContent) {
+                alert('No content to summarize');
+                return;
+            }
+
+            if (!prompt) {
+                alert('Please enter a prompt');
+                return;
+            }
+
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<span class="loading"></span> Generating summary...';
+
+            try {
+                // Using a simple AI simulation - in production, you'd call an actual AI API
+                const summary = await simulateAISummary(currentPageContent, prompt);
+                resultDiv.innerHTML = `<strong>Summary:</strong><br><br>${summary}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+            }
+        }
+
+        // Simulate AI summary (replace with actual AI API call)
+        function simulateAISummary(content, prompt) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // Strip HTML tags for processing
+                    const textContent = content.replace(/<[^>]*>/g, ' ');
+                    const sentences = textContent.split(/[.!?]+/).filter(s => s.trim().length > 20);
+                    
+                    // Simple extraction-based summary
+                    const keySentences = sentences.slice(0, 5);
+                    
+                    let summary = `<p>Based on your request: "<em>${prompt}</em>"</p>`;
+                    summary += `<p>Here's a summary of the content:</p>`;
+                    summary += `<ul>`;
+                    
+                    keySentences.forEach(sentence => {
+                        if (sentence.trim().length > 30) {
+                            summary += `<li>${sentence.trim()}.</li>`;
+                        }
+                    });
+                    
+                    summary += `</ul>`;
+                    summary += `<p><strong>Note:</strong> This is a simulated summary. Connect to an actual AI API (like OpenAI, Anthropic, etc.) for better results.</p>`;
+                    
+                    resolve(summary);
+                }, 1500);
+            });
+        }
+
+        // Clear summary
+        function clearSummary() {
+            document.getElementById('summaryResult').style.display = 'none';
+            document.getElementById('summaryResult').innerHTML = '';
+        }
+
+        // Allow Enter key to test connection
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                testConnection();
+            }
+        });
+    </script>
+</body></html>
